@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ChainPulse/decoder"
 	"context"
 	"fmt"
 	"log"
@@ -63,7 +64,9 @@ func main() {
 		query := ethereum.FilterQuery{
 			FromBlock: big.NewInt(currentBlock + 1),
 			ToBlock:   big.NewInt(toBlock),
+			// 监听的合约地址
 			Addresses: []common.Address{contractAddr},
+			// 监听的事件
 			Topics: [][]common.Hash{
 				{transferSign},
 			},
@@ -87,6 +90,18 @@ func main() {
 			// 2. 解析 Data -> Value
 			// 3. Insert into Database
 			// ===================================
+			transferData, err := decoder.TransferParse(vLog.Topics, common.Bytes2Hex(vLog.Data))
+			if err != nil {
+				// ⚠️ 建议用 Println 而不是 Fatal，防止单条脏数据导致程序崩溃
+				log.Println("解码失败，跳过:", err)
+				continue
+			}
+			fmt.Println("------------------------------------------------")
+			fmt.Printf("🧱 区块高度 : %d\n", vLog.BlockNumber)
+			fmt.Printf("🔗 交易 Hash: %s\n", vLog.TxHash.Hex())
+			fmt.Printf("📤 发送方   : %s\n", transferData.Sender.Hex())
+			fmt.Printf("📥 接收方   : %s\n", transferData.To.Hex())
+			fmt.Printf("💰 原始金额 : %s\n", transferData.Value.String())
 		}
 
 		// G. 更新游标 (这一步至关重要！)
